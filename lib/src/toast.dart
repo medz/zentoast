@@ -310,12 +310,6 @@ class _ToastViewerState extends State<ToastViewer> {
   Widget build(BuildContext context) {
     final toastProvider = ToastProvider.of(context);
 
-    watch(context, () {
-      print(
-        'isHovered: ${isHovered()} | forceHover: ${this.paused()} | hasItemDragged: ${toastProvider.onDragToastIndex().isNotEmpty}',
-      );
-    });
-
     _wipeToastEffect ??= effect(context, () {
       onEffectCleanup(() => _cleanUpDeleteTimer?.cancel());
       onEffectDispose(() => _cleanUpDeleteTimer?.cancel());
