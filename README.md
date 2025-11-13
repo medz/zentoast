@@ -3,7 +3,7 @@
 **A headless, fully customizable toast system for Flutter.**
 You design the UI — **zentoast** takes care of animation, physics, queuing, gestures, and multi-position viewers. Perfect for building Sonner-like toasts, message banners, or fully custom notification UIs.
 
-[Demo here 🚀](http://zentoast.vercel.app/)
+[Demo here 🚀](https://zentoast.vercel.app/)
 
 ## Features
 

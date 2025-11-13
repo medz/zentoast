@@ -1,3 +1,11 @@
+## 0.0.2
+- Provide comprehensive documentation for:
+  - `Toast`
+  - `ToastProvider`
+  - `ToastTheme`
+  - `ToastThemeProvider`
+  - `ToastViewer`
+
 ## 0.0.1
 
 - Initial release of `zentoast`

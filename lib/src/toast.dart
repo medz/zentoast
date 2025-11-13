@@ -7,9 +7,31 @@ import 'package:oref/oref.dart';
 
 part 'utils.dart';
 
+/// A toast instance that can be shown or hidden.
+///
+/// Toasts are headless widgets - you provide the UI via the [builder] function.
+/// The toast system handles animation, positioning, and lifecycle management.
+///
+/// Example:
+/// ```dart
+/// Toast(
+///   height: 64,
+///   builder: (toast) => Container(
+///     padding: EdgeInsets.all(16),
+///     child: Text('Hello, World!'),
+///   ),
+/// ).show(context);
+/// ```
 class Toast {
   Toast._({required this.id, required this.builder, this.height = 64});
 
+  /// Creates a new toast instance.
+  ///
+  /// [builder] is called to build the toast widget. The [Toast] instance is
+  /// passed to the builder so you can call [hide] from within the widget.
+  ///
+  /// [height] specifies the height of the toast in logical pixels. This is used
+  /// for layout calculations and animations. Defaults to 64.
   factory Toast({
     required Widget Function(Toast data) builder,
     double height = 64,
@@ -18,20 +40,68 @@ class Toast {
     return Toast._(id: '${id.hashCode}', builder: builder, height: height);
   }
 
+  /// Unique identifier for this toast instance.
   final String id;
+
+  /// Height of the toast in logical pixels.
+  ///
+  /// Used for layout calculations and animations. Should match the actual
+  /// height of the widget returned by [builder].
   final double height;
+
+  /// Builder function that creates the toast widget.
+  ///
+  /// The [Toast] instance is passed as a parameter, allowing you to call
+  /// [hide] from within the widget (e.g., in a close button).
   final Widget Function(Toast data) builder;
 
+  /// Hides this toast with animation.
+  ///
+  /// The toast will be removed from the stack after the hide animation completes.
   void hide(BuildContext context) => ToastProvider.of(context).hide(this);
+
+  /// Shows this toast in the nearest [ToastViewer].
+  ///
+  /// The toast will appear with an entrance animation and be added to the
+  /// toast stack managed by [ToastProvider].
   void show(BuildContext context) => ToastProvider.of(context).show(this);
 }
 
+/// Theme configuration for toast viewers.
+///
+/// Controls the spacing and padding of toast stacks. This theme can be
+/// provided via [ToastThemeProvider] or accessed through `Theme.of(context)`.
+///
+/// Example:
+/// ```dart
+/// ToastTheme(
+///   viewerPadding: EdgeInsets.all(16),
+///   gap: 12,
+/// )
+/// ```
 class ToastTheme extends ThemeExtension<ToastTheme> {
+  /// Creates a new toast theme.
+  ///
+  /// [viewerPadding] is the padding around the entire toast stack.
+  /// [gap] is the spacing between individual toasts in the stack.
   ToastTheme({required this.viewerPadding, required this.gap});
 
+  /// Padding around the toast viewer container.
+  ///
+  /// This creates space between the toasts and the edges of the screen
+  /// or parent widget.
   final EdgeInsets viewerPadding;
+
+  /// Gap between individual toasts in the stack.
+  ///
+  /// When toasts are collapsed (not hovered), only this gap is visible
+  /// between toasts. When expanded (hovered), the full toast height plus
+  /// this gap is used.
   final double gap;
 
+  /// Creates a copy of this theme with the given fields replaced.
+  ///
+  /// If a parameter is null, the corresponding value from this theme is used.
   @override
   ThemeExtension<ToastTheme> copyWith({
     EdgeInsets? viewerPadding,
@@ -43,6 +113,10 @@ class ToastTheme extends ThemeExtension<ToastTheme> {
     );
   }
 
+  /// Linearly interpolates between two themes.
+  ///
+  /// Used by Flutter's theme system to animate between theme changes.
+  /// [t] is the interpolation factor, typically between 0.0 and 1.0.
   @override
   ThemeExtension<ToastTheme> lerp(covariant ToastTheme? other, double t) {
     return ToastTheme(
@@ -54,10 +128,36 @@ class ToastTheme extends ThemeExtension<ToastTheme> {
   }
 }
 
+/// Provides [ToastTheme] to descendant widgets via the theme system.
+///
+/// Wrap your app or a subtree with this widget to configure toast spacing
+/// and padding. If [data] is null, default values are used.
+///
+/// Example:
+/// ```dart
+/// ToastThemeProvider(
+///   data: ToastTheme(
+///     viewerPadding: EdgeInsets.all(16),
+///     gap: 12,
+///   ),
+///   child: MyApp(),
+/// )
+/// ```
 class ToastThemeProvider extends StatelessWidget {
+  /// Creates a theme provider for toasts.
+  ///
+  /// [data] is the theme configuration. If null, defaults to
+  /// `ToastTheme(viewerPadding: EdgeInsets.all(12), gap: 8)`.
+  ///
+  /// [child] is the widget subtree that will have access to this theme.
   const ToastThemeProvider({super.key, this.data, required this.child});
 
+  /// The toast theme configuration.
+  ///
+  /// If null, default values are used.
   final ToastTheme? data;
+
+  /// The widget subtree that will have access to this theme.
   final Widget child;
 
   @override
@@ -79,6 +179,22 @@ class ToastThemeProvider extends StatelessWidget {
   }
 }
 
+/// Provides toast management functionality to descendant widgets.
+///
+/// This widget manages the toast stack and provides methods to show and hide
+/// toasts. Use [create] to wrap your app root, and [of] to access the provider
+/// from descendant widgets.
+///
+/// Example:
+/// ```dart
+/// void main() {
+///   runApp(
+///     ToastProvider.create(
+///       child: MyApp(),
+///     ),
+///   );
+/// }
+/// ```
 class ToastProvider extends InheritedWidget {
   const ToastProvider._({
     required this.data,
@@ -88,9 +204,29 @@ class ToastProvider extends InheritedWidget {
     required super.child,
   });
 
+  /// Returns the nearest [ToastProvider] ancestor.
+  ///
+  /// Throws if no [ToastProvider] is found in the widget tree.
+  ///
+  /// Example:
+  /// ```dart
+  /// final provider = ToastProvider.of(context);
+  /// provider.show(myToast);
+  /// ```
   static ToastProvider of(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<ToastProvider>()!;
 
+  /// Creates a [ToastProvider] widget.
+  ///
+  /// Wrap your app root with this to enable toast functionality throughout
+  /// your app. Only one [ToastProvider] is needed per app.
+  ///
+  /// Example:
+  /// ```dart
+  /// ToastProvider.create(
+  ///   child: MaterialApp(...),
+  /// )
+  /// ```
   static Widget create({required Widget child}) {
     return Builder(
       builder: (context) {
@@ -110,15 +246,48 @@ class ToastProvider extends InheritedWidget {
     );
   }
 
+  /// The list of active toasts in the stack.
+  ///
+  /// This is a reactive signal that updates when toasts are added or removed.
   final WritableSignal<List<Toast>> data;
+
+  /// Maps toast IDs to their indices in the stack.
+  ///
+  /// Used internally for tracking toast positions during animations.
   final WritableSignal<Map<String, int>> indexToastMap;
+
+  /// Set of toast indices that are marked for deletion.
+  ///
+  /// Used internally to track toasts that are animating out.
   final WritableSignal<Set<int>> willDeleteToastIndex;
+
+  /// Set of toast indices that are currently being dragged.
+  ///
+  /// Used internally to pause auto-dismissal during drag gestures.
   final WritableSignal<Set<int>> onDragToastIndex;
 
+  /// Adds a toast to the stack.
+  ///
+  /// The toast will appear in all [ToastViewer] widgets that are configured
+  /// to display it.
+  ///
+  /// Example:
+  /// ```dart
+  /// final toast = Toast(builder: (t) => Text('Hello'));
+  /// ToastProvider.of(context).show(toast);
+  /// ```
   void show(Toast toast) {
     data([...data(), toast]);
   }
 
+  /// Removes a toast from the stack with animation.
+  ///
+  /// The toast will animate out and be removed after the animation completes.
+  ///
+  /// Example:
+  /// ```dart
+  /// ToastProvider.of(context).hide(toast);
+  /// ```
   void hide(Toast toast) {
     final index = data().indexOf(toast);
     if (index == -1) {
@@ -132,7 +301,31 @@ class ToastProvider extends InheritedWidget {
   bool updateShouldNotify(covariant ToastProvider oldWidget) => false;
 }
 
+/// A widget that displays a stack of toasts with animations and gestures.
+///
+/// Place this widget in your widget tree to render toasts. You can have
+/// multiple [ToastViewer] widgets with different alignments to show toasts
+/// in different positions.
+///
+/// Example:
+/// ```dart
+/// ToastViewer(
+///   alignment: Alignment.topRight,
+///   delay: Duration(seconds: 3),
+///   visibleCount: 3,
+/// )
+/// ```
 class ToastViewer extends StatefulWidget {
+  /// Creates a toast viewer widget.
+  ///
+  /// [alignment] determines where on the screen the toasts appear.
+  /// Defaults to [Alignment.topRight].
+  ///
+  /// [delay] is the duration before a toast automatically dismisses.
+  /// Defaults to 2 seconds.
+  ///
+  /// [visibleCount] is the maximum number of toasts to show when not hovered.
+  /// When hovered, all toasts are visible. Defaults to 3.
   const ToastViewer({
     super.key,
     this.alignment = Alignment.topRight,
@@ -140,8 +333,30 @@ class ToastViewer extends StatefulWidget {
     this.visibleCount = 3,
   });
 
+  /// Duration before a toast automatically dismisses.
+  ///
+  /// Auto-dismissal is paused when:
+  /// - The user hovers over the toast stack
+  /// - The user taps a toast
+  /// - The user is dragging a toast
   final Duration delay;
+
+  /// Alignment of the toast stack on the screen.
+  ///
+  /// Common values:
+  /// - [Alignment.topRight] - Top right corner (default)
+  /// - [Alignment.topLeft] - Top left corner
+  /// - [Alignment.bottomRight] - Bottom right corner
+  /// - [Alignment.bottomLeft] - Bottom left corner
+  /// - [Alignment.topCenter] - Top center
+  /// - [Alignment.bottomCenter] - Bottom center
   final Alignment alignment;
+
+  /// Maximum number of toasts visible when not hovered.
+  ///
+  /// When the user hovers over the toast stack, all toasts become visible.
+  /// When not hovered, only the most recent [visibleCount] toasts are shown.
+  /// Older toasts are hidden with opacity animations.
   final int visibleCount;
 
   @override
@@ -160,9 +375,9 @@ class _ToastViewerState extends State<ToastViewer> {
   Timer? _periodicDeleteToastTimer;
   void _setHoverDebounced(bool value, {Duration? delay}) {
     _hoverDebounceTimer?.cancel();
-    if (untrack(paused)) return;
+    if (untrack(paused.call)) return;
     _hoverDebounceTimer = Timer(delay ?? const Duration(milliseconds: 200), () {
-      if (!untrack(paused)) isHovered(value);
+      if (!untrack(paused.call)) isHovered(value);
     });
   }
 
