@@ -655,19 +655,36 @@ class _ToastViewerState extends State<ToastViewer> {
       if (dragged || paused) return;
 
       _periodicDeleteToastTimer = Timer(widget.delay, () {
-        final dataValue = untrack(toastProvider.data.call);
+        final allToasts = untrack(toastProvider.data.call);
         final willDeleteToastIndex = untrack(
           toastProvider.willDeleteToastIndex.call,
         );
-        if (dataValue.isEmpty) return;
+        if (allToasts.isEmpty) return;
 
-        var index = 0;
-        while (willDeleteToastIndex.contains(index) &&
-            index < dataValue.length) {
-          index++;
+        // Filter toasts based on categories (same logic as in build)
+        final List<int> visibleMasterIndices;
+        if (widget.categories == null || widget.categories!.isEmpty) {
+          // All toasts are visible
+          visibleMasterIndices = List.generate(allToasts.length, (i) => i);
+        } else {
+          // Only toasts matching categories are visible
+          visibleMasterIndices = [];
+          for (var masterIndex = 0; masterIndex < allToasts.length; masterIndex++) {
+            final toast = allToasts[masterIndex];
+            if (widget.categories!.contains(toast.category)) {
+              visibleMasterIndices.add(masterIndex);
+            }
+          }
         }
-        if (index < dataValue.length) {
-          toastProvider.hide(dataValue[index]);
+
+        if (visibleMasterIndices.isEmpty) return;
+
+        // Find the first visible toast that's not marked for deletion
+        for (final masterIndex in visibleMasterIndices) {
+          if (!willDeleteToastIndex.contains(masterIndex)) {
+            toastProvider.hide(allToasts[masterIndex]);
+            break;
+          }
         }
       });
     });

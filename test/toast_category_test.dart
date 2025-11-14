@@ -461,5 +461,75 @@ void main() {
       expect(find.text('Error Toast'), findsNothing);
       expect(find.text('Warning Toast'), findsOneWidget);
     });
+
+    testWidgets('should auto-delete only visible category toasts',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ToastProvider.create(
+            child: Builder(
+              builder: (context) {
+                return Scaffold(
+                  body: Stack(
+                    children: [
+                      Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            ElevatedButton(
+                              onPressed: () {
+                                // Add toasts with different categories
+                                Toast(
+                                  category: ToastCategory.general,
+                                  builder: (toast) => const Text('General 1'),
+                                ).show(context);
+                                Toast(
+                                  category: ToastCategory.error,
+                                  builder: (toast) => const Text('Error 1'),
+                                ).show(context);
+                                Toast(
+                                  category: ToastCategory.general,
+                                  builder: (toast) => const Text('General 2'),
+                                ).show(context);
+                              },
+                              child: const Text('Show Toasts'),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Viewer showing only errors with short delay
+                      const SafeArea(
+                        child: ToastViewer(
+                          categories: [ToastCategory.error],
+                          delay: Duration(milliseconds: 100),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Show Toasts'));
+      await tester.pump();
+
+      // Initially, only error should be visible
+      expect(find.text('General 1'), findsNothing);
+      expect(find.text('Error 1'), findsOneWidget);
+      expect(find.text('General 2'), findsNothing);
+
+      // Wait for auto-delete delay
+      await tester.pump(const Duration(milliseconds: 150));
+
+      // Error should be auto-deleted
+      expect(find.text('Error 1'), findsNothing);
+      
+      // General toasts should still exist in provider but not visible in this viewer
+      // We can't easily verify they still exist without another viewer, but the test
+      // confirms the error toast was auto-deleted correctly
+    });
   });
 }
