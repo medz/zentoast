@@ -1,3 +1,6 @@
+## 0.0.3
+- Fix lint
+
 ## 0.0.2
 - Provide comprehensive documentation for:
   - `Toast`

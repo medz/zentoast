@@ -555,9 +555,9 @@ class _ToastViewerState extends State<ToastViewer> {
       if (dragged || paused) return;
 
       _periodicDeleteToastTimer = Timer(widget.delay, () {
-        final dataValue = untrack(toastProvider.data);
+        final dataValue = untrack(toastProvider.data.call);
         final willDeleteToastIndex = untrack(
-          toastProvider.willDeleteToastIndex,
+          toastProvider.willDeleteToastIndex.call,
         );
         if (dataValue.isEmpty) return;
 
@@ -575,7 +575,7 @@ class _ToastViewerState extends State<ToastViewer> {
     final theme = Theme.of(context);
     final toastTheme = theme.extension<ToastTheme>()!;
 
-    final toasts = watch(context, toastProvider.data);
+    final toasts = watch(context, toastProvider.data.call);
     int calculatePositionedIndex(int realIndex) {
       final deletedIndexes = toastProvider.willDeleteToastIndex();
       final deletedGreaterThanRealIndex =
@@ -627,7 +627,7 @@ class _ToastViewerState extends State<ToastViewer> {
                           .willDeleteToastIndex()
                           .contains(index);
                       final isFirstAppear = indexToast() == -1;
-                      final hovered = isHovered() || this.paused();
+                      final hovered = isHovered() || paused();
                       final gap = toastTheme.gap;
 
                       double calculateHeight() {

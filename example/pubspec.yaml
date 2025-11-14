@@ -35,10 +35,10 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   zentoast:
-    git:
-      url: https://github.com/definev/zentoast.git
-      ref: main
-    # path: ../
+    # git:
+    #   url: https://github.com/definev/zentoast.git
+    #   ref: main
+    path: ../
   oref: ^2.5.1
 
 dev_dependencies:
