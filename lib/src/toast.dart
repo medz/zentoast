@@ -7,6 +7,54 @@ import 'package:oref/oref.dart';
 
 part 'utils.dart';
 
+/// A category for grouping and filtering toasts.
+///
+/// Categories allow you to organize toasts and display them in different
+/// [ToastViewer] widgets based on their type. For example, you might want
+/// error toasts in one location and success toasts in another.
+///
+/// Example:
+/// ```dart
+/// Toast(
+///   category: ToastCategory.error,
+///   builder: (toast) => ErrorToast(...),
+/// ).show(context);
+/// ```
+class ToastCategory {
+  /// Creates a custom toast category.
+  ///
+  /// [name] is the identifier for this category.
+  const ToastCategory(this.name);
+
+  /// General purpose toasts. This is the default category.
+  static const general = ToastCategory('general');
+
+  /// Success notification toasts.
+  static const success = ToastCategory('success');
+
+  /// Warning notification toasts.
+  static const warning = ToastCategory('warning');
+
+  /// Error notification toasts.
+  static const error = ToastCategory('error');
+
+  /// The identifier for this category.
+  final String name;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ToastCategory &&
+          runtimeType == other.runtimeType &&
+          name == other.name;
+
+  @override
+  int get hashCode => name.hashCode;
+
+  @override
+  String toString() => 'ToastCategory($name)';
+}
+
 /// A toast instance that can be shown or hidden.
 ///
 /// Toasts are headless widgets - you provide the UI via the [builder] function.
@@ -16,6 +64,7 @@ part 'utils.dart';
 /// ```dart
 /// Toast(
 ///   height: 64,
+///   category: ToastCategory.success,
 ///   builder: (toast) => Container(
 ///     padding: EdgeInsets.all(16),
 ///     child: Text('Hello, World!'),
@@ -23,7 +72,12 @@ part 'utils.dart';
 /// ).show(context);
 /// ```
 class Toast {
-  Toast._({required this.id, required this.builder, this.height = 64});
+  Toast._({
+    required this.id,
+    required this.builder,
+    this.height = 64,
+    this.category = ToastCategory.general,
+  });
 
   /// Creates a new toast instance.
   ///
@@ -32,12 +86,21 @@ class Toast {
   ///
   /// [height] specifies the height of the toast in logical pixels. This is used
   /// for layout calculations and animations. Defaults to 64.
+  ///
+  /// [category] specifies the category of this toast. Used for filtering toasts
+  /// in [ToastViewer]. Defaults to [ToastCategory.general].
   factory Toast({
     required Widget Function(Toast data) builder,
     double height = 64,
+    ToastCategory category = ToastCategory.general,
   }) {
     final id = UniqueKey();
-    return Toast._(id: '${id.hashCode}', builder: builder, height: height);
+    return Toast._(
+      id: '${id.hashCode}',
+      builder: builder,
+      height: height,
+      category: category,
+    );
   }
 
   /// Unique identifier for this toast instance.
@@ -48,6 +111,12 @@ class Toast {
   /// Used for layout calculations and animations. Should match the actual
   /// height of the widget returned by [builder].
   final double height;
+
+  /// Category of this toast.
+  ///
+  /// Used by [ToastViewer] to filter which toasts to display.
+  /// Defaults to [ToastCategory.general].
+  final ToastCategory category;
 
   /// Builder function that creates the toast widget.
   ///
@@ -307,12 +376,23 @@ class ToastProvider extends InheritedWidget {
 /// multiple [ToastViewer] widgets with different alignments to show toasts
 /// in different positions.
 ///
+/// [categories] allows filtering which toasts are displayed. If null or empty,
+/// all toasts are shown. If provided, only toasts matching one of the specified
+/// categories will be displayed.
+///
 /// Example:
 /// ```dart
+/// // Show all toasts
 /// ToastViewer(
 ///   alignment: Alignment.topRight,
 ///   delay: Duration(seconds: 3),
 ///   visibleCount: 3,
+/// )
+///
+/// // Show only error and warning toasts
+/// ToastViewer(
+///   alignment: Alignment.bottomLeft,
+///   categories: [ToastCategory.error, ToastCategory.warning],
 /// )
 /// ```
 class ToastViewer extends StatefulWidget {
@@ -326,11 +406,16 @@ class ToastViewer extends StatefulWidget {
   ///
   /// [visibleCount] is the maximum number of toasts to show when not hovered.
   /// When hovered, all toasts are visible. Defaults to 3.
+  ///
+  /// [categories] filters which toast categories to display. If null or empty,
+  /// all toasts are shown. If provided, only toasts matching one of the
+  /// specified categories will be displayed.
   const ToastViewer({
     super.key,
     this.alignment = Alignment.topRight,
     this.delay = const Duration(milliseconds: 2000),
     this.visibleCount = 3,
+    this.categories,
   });
 
   /// Duration before a toast automatically dismisses.
@@ -358,6 +443,21 @@ class ToastViewer extends StatefulWidget {
   /// When not hovered, only the most recent [visibleCount] toasts are shown.
   /// Older toasts are hidden with opacity animations.
   final int visibleCount;
+
+  /// Categories of toasts to display in this viewer.
+  ///
+  /// If null or empty, all toasts are shown regardless of category.
+  /// If provided, only toasts with a category matching one of the specified
+  /// categories will be displayed.
+  ///
+  /// Example:
+  /// ```dart
+  /// // Show only error and warning toasts
+  /// ToastViewer(
+  ///   categories: [ToastCategory.error, ToastCategory.warning],
+  /// )
+  /// ```
+  final List<ToastCategory>? categories;
 
   @override
   State<ToastViewer> createState() => _ToastViewerState();
@@ -575,7 +675,15 @@ class _ToastViewerState extends State<ToastViewer> {
     final theme = Theme.of(context);
     final toastTheme = theme.extension<ToastTheme>()!;
 
-    final toasts = watch(context, toastProvider.data.call);
+    final allToasts = watch(context, toastProvider.data.call);
+    
+    // Filter toasts based on categories if specified
+    final toasts = (widget.categories == null || widget.categories!.isEmpty)
+        ? allToasts
+        : allToasts
+            .where((toast) => widget.categories!.contains(toast.category))
+            .toList();
+    
     int calculatePositionedIndex(int realIndex) {
       final deletedIndexes = toastProvider.willDeleteToastIndex();
       final deletedGreaterThanRealIndex =
