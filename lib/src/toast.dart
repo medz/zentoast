@@ -321,21 +321,25 @@ class ToastProvider extends InheritedWidget {
   /// The list of active toasts in the stack.
   ///
   /// This is a reactive signal that updates when toasts are added or removed.
+  @visibleForTesting
   final WritableSignal<List<Toast>> data;
 
   /// Maps toast IDs to their indices in the stack.
   ///
   /// Used internally for tracking toast positions during animations.
+  @visibleForTesting
   final WritableSignal<Map<String, int>> indexToastMap;
 
   /// Set of toast indices that are marked for deletion.
   ///
   /// Used internally to track toasts that are animating out.
+  @visibleForTesting
   final WritableSignal<Set<int>> willDeleteToastIndex;
 
   /// Set of toast indices that are currently being dragged.
   ///
   /// Used internally to pause auto-dismissal during drag gestures.
+  @visibleForTesting
   final WritableSignal<Set<int>> onDragToastIndex;
 
   /// Adds a toast to the stack.
