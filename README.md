@@ -1,3 +1,5 @@
+![banner.png](assets/banner.png)
+
 # zentoast
 
 **A headless, fully customizable toast system for Flutter.**
