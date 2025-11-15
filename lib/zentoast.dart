@@ -8,4 +8,10 @@ library;
 /// Do not import files from `src/` directly; they are considered private to the package.
 
 export 'src/toast.dart'
-    show Toast, ToastProvider, ToastTheme, ToastThemeProvider, ToastViewer;
+    show
+        Toast,
+        ToastCategory,
+        ToastProvider,
+        ToastTheme,
+        ToastThemeProvider,
+        ToastViewer;

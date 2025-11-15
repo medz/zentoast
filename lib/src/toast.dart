@@ -7,6 +7,54 @@ import 'package:oref/oref.dart';
 
 part 'utils.dart';
 
+/// A category for grouping and filtering toasts.
+///
+/// Categories allow you to organize toasts and display them in different
+/// [ToastViewer] widgets based on their type. For example, you might want
+/// error toasts in one location and success toasts in another.
+///
+/// Example:
+/// ```dart
+/// Toast(
+///   category: ToastCategory.error,
+///   builder: (toast) => ErrorToast(...),
+/// ).show(context);
+/// ```
+class ToastCategory {
+  /// Creates a custom toast category.
+  ///
+  /// [name] is the identifier for this category.
+  const ToastCategory(this.name);
+
+  /// General purpose toasts. This is the default category.
+  static const general = ToastCategory('general');
+
+  /// Success notification toasts.
+  static const success = ToastCategory('success');
+
+  /// Warning notification toasts.
+  static const warning = ToastCategory('warning');
+
+  /// Error notification toasts.
+  static const error = ToastCategory('error');
+
+  /// The identifier for this category.
+  final String name;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ToastCategory &&
+          runtimeType == other.runtimeType &&
+          name == other.name;
+
+  @override
+  int get hashCode => name.hashCode;
+
+  @override
+  String toString() => 'ToastCategory($name)';
+}
+
 /// A toast instance that can be shown or hidden.
 ///
 /// Toasts are headless widgets - you provide the UI via the [builder] function.
@@ -16,6 +64,7 @@ part 'utils.dart';
 /// ```dart
 /// Toast(
 ///   height: 64,
+///   category: ToastCategory.success,
 ///   builder: (toast) => Container(
 ///     padding: EdgeInsets.all(16),
 ///     child: Text('Hello, World!'),
@@ -23,7 +72,12 @@ part 'utils.dart';
 /// ).show(context);
 /// ```
 class Toast {
-  Toast._({required this.id, required this.builder, this.height = 64});
+  Toast._({
+    required this.id,
+    required this.builder,
+    this.height = 64,
+    this.category = ToastCategory.general,
+  });
 
   /// Creates a new toast instance.
   ///
@@ -32,12 +86,21 @@ class Toast {
   ///
   /// [height] specifies the height of the toast in logical pixels. This is used
   /// for layout calculations and animations. Defaults to 64.
+  ///
+  /// [category] specifies the category of this toast. Used for filtering toasts
+  /// in [ToastViewer]. Defaults to [ToastCategory.general].
   factory Toast({
     required Widget Function(Toast data) builder,
     double height = 64,
+    ToastCategory category = ToastCategory.general,
   }) {
     final id = UniqueKey();
-    return Toast._(id: '${id.hashCode}', builder: builder, height: height);
+    return Toast._(
+      id: '${id.hashCode}',
+      builder: builder,
+      height: height,
+      category: category,
+    );
   }
 
   /// Unique identifier for this toast instance.
@@ -48,6 +111,12 @@ class Toast {
   /// Used for layout calculations and animations. Should match the actual
   /// height of the widget returned by [builder].
   final double height;
+
+  /// Category of this toast.
+  ///
+  /// Used by [ToastViewer] to filter which toasts to display.
+  /// Defaults to [ToastCategory.general].
+  final ToastCategory category;
 
   /// Builder function that creates the toast widget.
   ///
@@ -84,7 +153,10 @@ class ToastTheme extends ThemeExtension<ToastTheme> {
   ///
   /// [viewerPadding] is the padding around the entire toast stack.
   /// [gap] is the spacing between individual toasts in the stack.
-  ToastTheme({required this.viewerPadding, required this.gap});
+  const ToastTheme({required this.viewerPadding, required this.gap});
+
+  /// efault toast theme.
+  static const kDefault = ToastTheme(viewerPadding: EdgeInsets.all(12), gap: 8);
 
   /// Padding around the toast viewer container.
   ///
@@ -249,21 +321,25 @@ class ToastProvider extends InheritedWidget {
   /// The list of active toasts in the stack.
   ///
   /// This is a reactive signal that updates when toasts are added or removed.
+  @visibleForTesting
   final WritableSignal<List<Toast>> data;
 
   /// Maps toast IDs to their indices in the stack.
   ///
   /// Used internally for tracking toast positions during animations.
+  @visibleForTesting
   final WritableSignal<Map<String, int>> indexToastMap;
 
   /// Set of toast indices that are marked for deletion.
   ///
   /// Used internally to track toasts that are animating out.
+  @visibleForTesting
   final WritableSignal<Set<int>> willDeleteToastIndex;
 
   /// Set of toast indices that are currently being dragged.
   ///
   /// Used internally to pause auto-dismissal during drag gestures.
+  @visibleForTesting
   final WritableSignal<Set<int>> onDragToastIndex;
 
   /// Adds a toast to the stack.
@@ -307,12 +383,23 @@ class ToastProvider extends InheritedWidget {
 /// multiple [ToastViewer] widgets with different alignments to show toasts
 /// in different positions.
 ///
+/// [categories] allows filtering which toasts are displayed. If null or empty,
+/// all toasts are shown. If provided, only toasts matching one of the specified
+/// categories will be displayed.
+///
 /// Example:
 /// ```dart
+/// // Show all toasts
 /// ToastViewer(
 ///   alignment: Alignment.topRight,
 ///   delay: Duration(seconds: 3),
 ///   visibleCount: 3,
+/// )
+///
+/// // Show only error and warning toasts
+/// ToastViewer(
+///   alignment: Alignment.bottomLeft,
+///   categories: [ToastCategory.error, ToastCategory.warning],
 /// )
 /// ```
 class ToastViewer extends StatefulWidget {
@@ -326,11 +413,16 @@ class ToastViewer extends StatefulWidget {
   ///
   /// [visibleCount] is the maximum number of toasts to show when not hovered.
   /// When hovered, all toasts are visible. Defaults to 3.
+  ///
+  /// [categories] filters which toast categories to display. If null or empty,
+  /// all toasts are shown. If provided, only toasts matching one of the
+  /// specified categories will be displayed.
   const ToastViewer({
     super.key,
     this.alignment = Alignment.topRight,
     this.delay = const Duration(milliseconds: 2000),
     this.visibleCount = 3,
+    this.categories,
   });
 
   /// Duration before a toast automatically dismisses.
@@ -339,7 +431,8 @@ class ToastViewer extends StatefulWidget {
   /// - The user hovers over the toast stack
   /// - The user taps a toast
   /// - The user is dragging a toast
-  final Duration delay;
+  /// If null, auto-dismissal is disabled.
+  final Duration? delay;
 
   /// Alignment of the toast stack on the screen.
   ///
@@ -359,6 +452,21 @@ class ToastViewer extends StatefulWidget {
   /// Older toasts are hidden with opacity animations.
   final int visibleCount;
 
+  /// Categories of toasts to display in this viewer.
+  ///
+  /// If null or empty, all toasts are shown regardless of category.
+  /// If provided, only toasts with a category matching one of the specified
+  /// categories will be displayed.
+  ///
+  /// Example:
+  /// ```dart
+  /// // Show only error and warning toasts
+  /// ToastViewer(
+  ///   categories: [ToastCategory.error, ToastCategory.warning],
+  /// )
+  /// ```
+  final List<ToastCategory>? categories;
+
   @override
   State<ToastViewer> createState() => _ToastViewerState();
 }
@@ -366,6 +474,15 @@ class ToastViewer extends StatefulWidget {
 class _ToastViewerState extends State<ToastViewer> {
   final isHovered = signal(null, false);
   final paused = signal(null, false);
+  late final filteredWillDeleteToastIndex = computed<Set<int>>(context, (_) {
+    final toastProvider = ToastProvider.of(context);
+    final allToasts = toastProvider.data();
+    final willDeleteToastIndex = toastProvider.willDeleteToastIndex();
+    return {
+      for (final index in willDeleteToastIndex)
+        if (isBelongToCategories(allToasts[index])) index,
+    };
+  });
 
   Effect? _wipeToastEffect;
   Effect? _periodicDeleteToastEffect;
@@ -373,6 +490,36 @@ class _ToastViewerState extends State<ToastViewer> {
   Timer? _cleanUpDeleteTimer;
   Timer? _hoverDebounceTimer;
   Timer? _periodicDeleteToastTimer;
+
+  /// Helper method to filter toasts by category and create index mapping
+  /// Returns a record with (filteredToasts, filteredToMasterIndexMap)
+  ({List<Toast> toasts, Map<int, int> filteredToMasterIndex})
+  _filterToastsByCategory(List<Toast> allToasts) {
+    if (widget.categories == null || widget.categories!.isEmpty) {
+      // No filtering - return all toasts with identity mapping
+      return (
+        toasts: allToasts,
+        filteredToMasterIndex: {
+          for (var i in List.generate(allToasts.length, (i) => i)) i: i,
+        },
+      );
+    } else {
+      // Filter toasts by category
+      final filteredToasts = <Toast>[];
+      final indexMap = <int, int>{};
+
+      for (var masterIndex = 0; masterIndex < allToasts.length; masterIndex++) {
+        final toast = allToasts[masterIndex];
+        if (widget.categories!.contains(toast.category)) {
+          indexMap[filteredToasts.length] = masterIndex;
+          filteredToasts.add(toast);
+        }
+      }
+
+      return (toasts: filteredToasts, filteredToMasterIndex: indexMap);
+    }
+  }
+
   void _setHoverDebounced(bool value, {Duration? delay}) {
     _hoverDebounceTimer?.cancel();
     if (untrack(paused.call)) return;
@@ -387,7 +534,8 @@ class _ToastViewerState extends State<ToastViewer> {
     int index,
     double width,
   ) {
-    final toastTheme = Theme.of(context).extension<ToastTheme>()!;
+    final toastTheme =
+        Theme.of(context).extension<ToastTheme>() ?? ToastTheme.kDefault;
 
     return (Offset transform, double scale, double opacity) => Positioned(
       bottom: switch (widget.alignment) {
@@ -521,6 +669,11 @@ class _ToastViewerState extends State<ToastViewer> {
     super.dispose();
   }
 
+  bool isBelongToCategories(Toast toast) {
+    if (widget.categories == null || widget.categories!.isEmpty) return true;
+    return widget.categories!.contains(toast.category);
+  }
+
   @override
   Widget build(BuildContext context) {
     final toastProvider = ToastProvider.of(context);
@@ -548,39 +701,56 @@ class _ToastViewerState extends State<ToastViewer> {
       onEffectDispose(() => _periodicDeleteToastTimer?.cancel());
 
       /// Retrigger effect when willDeleteToastIndex changes
-      final _ = toastProvider.willDeleteToastIndex();
+      final _ = filteredWillDeleteToastIndex();
       final _ = toastProvider.data();
       final dragged = toastProvider.onDragToastIndex().isNotEmpty;
       final paused = this.paused();
       if (dragged || paused) return;
+      if (widget.delay == null) return;
 
-      _periodicDeleteToastTimer = Timer(widget.delay, () {
-        final dataValue = untrack(toastProvider.data.call);
-        final willDeleteToastIndex = untrack(
-          toastProvider.willDeleteToastIndex.call,
-        );
-        if (dataValue.isEmpty) return;
+      _periodicDeleteToastTimer = Timer(widget.delay!, () {
+        final allToasts = untrack(toastProvider.data.call);
+        final willDeleteToastIndex = untrack(filteredWillDeleteToastIndex.call);
+        if (allToasts.isEmpty) return;
 
-        var index = 0;
-        while (willDeleteToastIndex.contains(index) &&
-            index < dataValue.length) {
-          index++;
-        }
-        if (index < dataValue.length) {
-          toastProvider.hide(dataValue[index]);
+        // Use helper to filter toasts
+        final filtered = _filterToastsByCategory(allToasts);
+        if (filtered.toasts.isEmpty) return;
+
+        // Find the first visible toast that's not marked for deletion
+        for (final entry in filtered.filteredToMasterIndex.entries) {
+          final masterIndex = entry.value;
+          if (!willDeleteToastIndex.contains(masterIndex)) {
+            toastProvider.hide(allToasts[masterIndex]);
+            break;
+          }
         }
       });
     });
 
     final theme = Theme.of(context);
-    final toastTheme = theme.extension<ToastTheme>()!;
+    final toastTheme = theme.extension<ToastTheme>() ?? ToastTheme.kDefault;
 
-    final toasts = watch(context, toastProvider.data.call);
-    int calculatePositionedIndex(int realIndex) {
-      final deletedIndexes = toastProvider.willDeleteToastIndex();
-      final deletedGreaterThanRealIndex =
-          deletedIndexes.where((index) => index > realIndex).length;
-      return toasts.length - realIndex - deletedGreaterThanRealIndex - 1;
+    final allToasts = watch(context, toastProvider.data.call);
+
+    // Use helper to filter toasts by category
+    final filtered = _filterToastsByCategory(allToasts);
+    final toasts = filtered.toasts;
+    final filteredToMasterIndex = filtered.filteredToMasterIndex;
+
+    int calculatePositionedIndex(int filteredIndex, int masterIndex) {
+      final deletedIndexes = filteredWillDeleteToastIndex();
+      int deletedIndexesGreaterThanMasterIndexCount = 0;
+      for (final masterDeletedIndex in deletedIndexes) {
+        if (masterDeletedIndex > masterIndex) {
+          deletedIndexesGreaterThanMasterIndexCount++;
+        }
+      }
+
+      return toasts.length -
+          filteredIndex -
+          deletedIndexesGreaterThanMasterIndexCount -
+          1;
     }
 
     return LayoutBuilder(
@@ -596,10 +766,14 @@ class _ToastViewerState extends State<ToastViewer> {
             child: Stack(
               clipBehavior: Clip.none,
               children: [
-                for (final (index, toast) in toasts.indexed)
+                for (final (filteredIndex, toast) in toasts.indexed)
                   SignalBuilder(
                     builder: (context) {
-                      final positionedIndex = calculatePositionedIndex(index);
+                      final masterIndex = filteredToMasterIndex[filteredIndex]!;
+                      final positionedIndex = calculatePositionedIndex(
+                        filteredIndex,
+                        masterIndex,
+                      );
                       final indexToast = writableComputed<int>(
                         context,
                         get:
@@ -613,19 +787,13 @@ class _ToastViewerState extends State<ToastViewer> {
                       );
                       effect(context, () async {
                         if (indexToast() == -1) {
-                          await Future.delayed(
-                            const Duration(milliseconds: 300),
-                          );
-                          toastProvider.indexToastMap({
-                            ...toastProvider.indexToastMap(),
-                            toast.id: index,
-                          });
+                          await Future.delayed(Durations.medium2);
+                          indexToast(masterIndex);
                         }
                       });
 
-                      final isMarkDeleted = toastProvider
-                          .willDeleteToastIndex()
-                          .contains(index);
+                      final isMarkDeleted = filteredWillDeleteToastIndex()
+                          .contains(masterIndex);
                       final isFirstAppear = indexToast() == -1;
                       final hovered = isHovered() || paused();
                       final gap = toastTheme.gap;
@@ -634,9 +802,9 @@ class _ToastViewerState extends State<ToastViewer> {
                         double height = 0;
                         List<Toast> visualToasts = [];
                         for (var i = toasts.length - 1; i >= 0; i--) {
-                          if (toastProvider //
-                              .willDeleteToastIndex()
-                              .contains(i)) {
+                          final masterIndexForI = filteredToMasterIndex[i]!;
+                          if (filteredWillDeleteToastIndex() //
+                              .contains(masterIndexForI)) {
                             continue;
                           }
                           visualToasts.add(toasts[i]);
@@ -673,7 +841,7 @@ class _ToastViewerState extends State<ToastViewer> {
                       return _buildToastCard(
                         context,
                         toast,
-                        index,
+                        masterIndex,
                         width,
                       ).motion(
                         MotionArgument.offset(
