@@ -1,4 +1,4 @@
-![banner.png](assets/banner.png)
+![banner.png](https://github.com/definev/zentoast/blob/main/assets/banner.png?raw=true)
 
 # zentoast
 
