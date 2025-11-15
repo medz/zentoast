@@ -290,11 +290,15 @@ class CardToast extends StatelessWidget {
                           children: [
                             Icon(_icon, color: _accentColor, size: 24),
                             const SizedBox(width: 8),
-                            Text(
-                              title,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 16,
+                            Expanded(
+                              child: Text(
+                                title,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 16,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ],
@@ -552,14 +556,19 @@ class MyApp extends StatelessWidget {
                 SafeArea(
                   child: ToastViewer(
                     alignment: watch(context, toastAlignment.call),
-                    delay: Duration(seconds: 5),
+                    delay: Duration(seconds: 2),
+                    categories: [
+                      ToastCategory.general,
+                      ToastCategory.success,
+                      ToastCategory.warning,
+                    ],
                   ),
                 ),
-                // Error viewer: shows only error toasts at bottom-left
+                // Card viewer: shows only error toasts at bottom-left
                 const SafeArea(
                   child: ToastViewer(
                     alignment: Alignment.topLeft,
-                    delay: Duration(seconds: 2),
+                    delay: Duration(seconds: 5),
                     categories: [ToastCategory('card')],
                   ),
                 ),

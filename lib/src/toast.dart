@@ -427,7 +427,8 @@ class ToastViewer extends StatefulWidget {
   /// - The user hovers over the toast stack
   /// - The user taps a toast
   /// - The user is dragging a toast
-  final Duration delay;
+  /// If null, auto-dismissal is disabled.
+  final Duration? delay;
 
   /// Alignment of the toast stack on the screen.
   ///
@@ -469,6 +470,15 @@ class ToastViewer extends StatefulWidget {
 class _ToastViewerState extends State<ToastViewer> {
   final isHovered = signal(null, false);
   final paused = signal(null, false);
+  late final filteredWillDeleteToastIndex = computed<Set<int>>(context, (_) {
+    final toastProvider = ToastProvider.of(context);
+    final allToasts = toastProvider.data();
+    final willDeleteToastIndex = toastProvider.willDeleteToastIndex();
+    return {
+      for (final index in willDeleteToastIndex)
+        if (isBelongToCategories(allToasts[index])) index,
+    };
+  });
 
   Effect? _wipeToastEffect;
   Effect? _periodicDeleteToastEffect;
@@ -655,6 +665,11 @@ class _ToastViewerState extends State<ToastViewer> {
     super.dispose();
   }
 
+  bool isBelongToCategories(Toast toast) {
+    if (widget.categories == null || widget.categories!.isEmpty) return true;
+    return widget.categories!.contains(toast.category);
+  }
+
   @override
   Widget build(BuildContext context) {
     final toastProvider = ToastProvider.of(context);
@@ -682,17 +697,16 @@ class _ToastViewerState extends State<ToastViewer> {
       onEffectDispose(() => _periodicDeleteToastTimer?.cancel());
 
       /// Retrigger effect when willDeleteToastIndex changes
-      final _ = toastProvider.willDeleteToastIndex();
+      final _ = filteredWillDeleteToastIndex();
       final _ = toastProvider.data();
       final dragged = toastProvider.onDragToastIndex().isNotEmpty;
       final paused = this.paused();
       if (dragged || paused) return;
+      if (widget.delay == null) return;
 
-      _periodicDeleteToastTimer = Timer(widget.delay, () {
+      _periodicDeleteToastTimer = Timer(widget.delay!, () {
         final allToasts = untrack(toastProvider.data.call);
-        final willDeleteToastIndex = untrack(
-          toastProvider.willDeleteToastIndex.call,
-        );
+        final willDeleteToastIndex = untrack(filteredWillDeleteToastIndex.call);
         if (allToasts.isEmpty) return;
 
         // Use helper to filter toasts
@@ -720,29 +734,19 @@ class _ToastViewerState extends State<ToastViewer> {
     final toasts = filtered.toasts;
     final filteredToMasterIndex = filtered.filteredToMasterIndex;
 
-    int calculatePositionedIndex(int filteredIndex) {
-      final deletedIndexes = toastProvider.willDeleteToastIndex();
-
-      // Count how many toasts in the current filtered list are NOT marked for deletion
-      // This gives us the actual visible count
-      int visibleCount = 0;
-      for (var i = 0; i < toasts.length; i++) {
-        final masterIndexForI = filteredToMasterIndex[i]!;
-        if (!deletedIndexes.contains(masterIndexForI)) {
-          visibleCount++;
+    int calculatePositionedIndex(int filteredIndex, int masterIndex) {
+      final deletedIndexes = filteredWillDeleteToastIndex();
+      int deletedIndexesGreaterThanMasterIndexCount = 0;
+      for (final masterDeletedIndex in deletedIndexes) {
+        if (masterDeletedIndex > masterIndex) {
+          deletedIndexesGreaterThanMasterIndexCount++;
         }
       }
 
-      // Count how many filtered toasts after this one are marked for deletion
-      int deletedAfter = 0;
-      for (var i = filteredIndex + 1; i < toasts.length; i++) {
-        final masterIndexForI = filteredToMasterIndex[i]!;
-        if (deletedIndexes.contains(masterIndexForI)) {
-          deletedAfter++;
-        }
-      }
-
-      return visibleCount - filteredIndex - deletedAfter - 1;
+      return toasts.length -
+          filteredIndex -
+          deletedIndexesGreaterThanMasterIndexCount -
+          1;
     }
 
     return LayoutBuilder(
@@ -764,6 +768,7 @@ class _ToastViewerState extends State<ToastViewer> {
                       final masterIndex = filteredToMasterIndex[filteredIndex]!;
                       final positionedIndex = calculatePositionedIndex(
                         filteredIndex,
+                        masterIndex,
                       );
                       final indexToast = writableComputed<int>(
                         context,
@@ -783,8 +788,7 @@ class _ToastViewerState extends State<ToastViewer> {
                         }
                       });
 
-                      final isMarkDeleted = toastProvider
-                          .willDeleteToastIndex()
+                      final isMarkDeleted = filteredWillDeleteToastIndex()
                           .contains(masterIndex);
                       final isFirstAppear = indexToast() == -1;
                       final hovered = isHovered() || paused();
@@ -795,8 +799,7 @@ class _ToastViewerState extends State<ToastViewer> {
                         List<Toast> visualToasts = [];
                         for (var i = toasts.length - 1; i >= 0; i--) {
                           final masterIndexForI = filteredToMasterIndex[i]!;
-                          if (toastProvider //
-                              .willDeleteToastIndex()
+                          if (filteredWillDeleteToastIndex() //
                               .contains(masterIndexForI)) {
                             continue;
                           }
