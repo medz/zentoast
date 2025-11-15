@@ -478,9 +478,9 @@ class HomePage extends StatelessWidget {
                           builder:
                               (toast) => CardToast(
                                 variant: ToastVariant.success,
-                                title: 'Card Error (appears bottom-left)',
+                                title: 'Card Success (appears top-left)',
                                 message:
-                                    'This toast has error category, so it appears in the bottom-left viewer that filters for errors!',
+                                    'This toast has success category, so it appears in the top-left viewer that filters for successes!',
                                 height: toast.height,
                                 onClose: () => toast.hide(context),
                               ),
@@ -496,9 +496,9 @@ class HomePage extends StatelessWidget {
                           builder:
                               (toast) => CardToast(
                                 variant: ToastVariant.info,
-                                title: 'Card Error (appears bottom-left)',
+                                title: 'Card Information (appears top-left)',
                                 message:
-                                    'Another error category toast for the bottom-left viewer.',
+                                    'Another information category toast for the top-left viewer.',
                                 height: toast.height,
                                 onClose: () => toast.hide(context),
                               ),
@@ -514,15 +514,15 @@ class HomePage extends StatelessWidget {
                           builder:
                               (toast) => CardToast(
                                 variant: ToastVariant.warning,
-                                title: 'Card Error (appears bottom-left)',
+                                title: 'Card Warning (appears top-left)',
                                 message:
-                                    'Error toasts only show in bottom-left corner due to category filtering!',
+                                    'Warning toasts only show in top-left corner due to category filtering!',
                                 height: toast.height,
                                 onClose: () => toast.hide(context),
                               ),
                         ).show(context);
                       },
-                      child: const Text('Error'),
+                      child: const Text('Warning'),
                     ),
                   ],
                 ),
@@ -564,7 +564,7 @@ class MyApp extends StatelessWidget {
                     ],
                   ),
                 ),
-                // Card viewer: shows only error toasts at bottom-left
+                // Card viewer: shows only error toasts at top-left
                 const SafeArea(
                   child: ToastViewer(
                     alignment: Alignment.topLeft,
