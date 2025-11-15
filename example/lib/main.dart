@@ -470,7 +470,7 @@ class HomePage extends StatelessWidget {
                       onPressed: () {
                         Toast(
                           height: 300,
-                          category: ToastCategory.error,
+                          category: const ToastCategory('card'),
                           builder:
                               (toast) => CardToast(
                                 variant: ToastVariant.success,
@@ -482,13 +482,13 @@ class HomePage extends StatelessWidget {
                               ),
                         ).show(context);
                       },
-                      child: const Text('Error (BL)'),
+                      child: const Text('Success'),
                     ),
                     OutlinedButton(
                       onPressed: () {
                         Toast(
                           height: 300,
-                          category: ToastCategory.error,
+                          category: const ToastCategory('card'),
                           builder:
                               (toast) => CardToast(
                                 variant: ToastVariant.info,
@@ -500,13 +500,13 @@ class HomePage extends StatelessWidget {
                               ),
                         ).show(context);
                       },
-                      child: const Text('Error (BL)'),
+                      child: const Text('Information'),
                     ),
                     OutlinedButton(
                       onPressed: () {
                         Toast(
                           height: 300,
-                          category: ToastCategory.error,
+                          category: const ToastCategory('card'),
                           builder:
                               (toast) => CardToast(
                                 variant: ToastVariant.warning,
@@ -518,7 +518,7 @@ class HomePage extends StatelessWidget {
                               ),
                         ).show(context);
                       },
-                      child: const Text('Warning'),
+                      child: const Text('Error'),
                     ),
                   ],
                 ),
@@ -557,13 +557,10 @@ class MyApp extends StatelessWidget {
                 ),
                 // Error viewer: shows only error toasts at bottom-left
                 const SafeArea(
-                  child: Align(
-                    alignment: Alignment.bottomLeft,
-                    child: ToastViewer(
-                      alignment: Alignment.bottomLeft,
-                      delay: Duration(seconds: 8),
-                      categories: [ToastCategory.error],
-                    ),
+                  child: ToastViewer(
+                    alignment: Alignment.topLeft,
+                    delay: Duration(seconds: 2),
+                    categories: [ToastCategory('card')],
                   ),
                 ),
               ],
