@@ -48,9 +48,7 @@ void main() {
 
   group('Toast with category', () {
     testWidgets('should have default category', (tester) async {
-      final toast = Toast(
-        builder: (toast) => const Text('Test'),
-      );
+      final toast = Toast(builder: (toast) => const Text('Test'));
 
       expect(toast.category, ToastCategory.general);
     });
@@ -83,8 +81,9 @@ void main() {
   });
 
   group('ToastViewer with category filtering', () {
-    testWidgets('should show all toasts when categories is null',
-        (tester) async {
+    testWidgets('should show all toasts when categories is null', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: ToastProvider.create(
@@ -112,11 +111,7 @@ void main() {
                           child: const Text('Show Toasts'),
                         ),
                       ),
-                      const SafeArea(
-                        child: ToastViewer(
-                          categories: null,
-                        ),
-                      ),
+                      const SafeArea(child: ToastViewer(categories: null)),
                     ],
                   ),
                 );
@@ -134,8 +129,9 @@ void main() {
       expect(find.text('Warning'), findsOneWidget);
     });
 
-    testWidgets('should show all toasts when categories is empty',
-        (tester) async {
+    testWidgets('should show all toasts when categories is empty', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: ToastProvider.create(
@@ -159,11 +155,7 @@ void main() {
                           child: const Text('Show Toasts'),
                         ),
                       ),
-                      const SafeArea(
-                        child: ToastViewer(
-                          categories: [],
-                        ),
-                      ),
+                      const SafeArea(child: ToastViewer(categories: [])),
                     ],
                   ),
                 );
@@ -180,8 +172,9 @@ void main() {
       expect(find.text('Error'), findsOneWidget);
     });
 
-    testWidgets('should only show toasts matching specified categories',
-        (tester) async {
+    testWidgets('should only show toasts matching specified categories', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: ToastProvider.create(
@@ -234,8 +227,9 @@ void main() {
       expect(find.text('Warning'), findsOneWidget);
     });
 
-    testWidgets('should support multiple viewers with different filters',
-        (tester) async {
+    testWidgets('should support multiple viewers with different filters', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: ToastProvider.create(
@@ -272,9 +266,7 @@ void main() {
                       const SafeArea(
                         child: Align(
                           alignment: Alignment.bottomLeft,
-                          child: ToastViewer(
-                            categories: [ToastCategory.error],
-                          ),
+                          child: ToastViewer(categories: [ToastCategory.error]),
                         ),
                       ),
                     ],
@@ -294,8 +286,9 @@ void main() {
       expect(find.text('Error Toast'), findsOneWidget);
     });
 
-    testWidgets('should filter out toasts not in category list',
-        (tester) async {
+    testWidgets('should filter out toasts not in category list', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: ToastProvider.create(
@@ -320,9 +313,7 @@ void main() {
                         ),
                       ),
                       const SafeArea(
-                        child: ToastViewer(
-                          categories: [ToastCategory.success],
-                        ),
+                        child: ToastViewer(categories: [ToastCategory.success]),
                       ),
                     ],
                   ),
@@ -342,8 +333,9 @@ void main() {
   });
 
   group('Backward compatibility', () {
-    testWidgets('should work with existing code without categories',
-        (tester) async {
+    testWidgets('should work with existing code without categories', (
+      tester,
+    ) async {
       // Test that old code without category parameter still works
       await tester.pumpWidget(
         MaterialApp(
@@ -363,9 +355,7 @@ void main() {
                           child: const Text('Show Toast'),
                         ),
                       ),
-                      const SafeArea(
-                        child: ToastViewer(),
-                      ),
+                      const SafeArea(child: ToastViewer()),
                     ],
                   ),
                 );
@@ -383,8 +373,9 @@ void main() {
   });
 
   group('Category filtering with toast deletion', () {
-    testWidgets('should correctly handle toast deletion with filtered viewer',
-        (tester) async {
+    testWidgets('should correctly handle toast deletion with filtered viewer', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: ToastProvider.create(
@@ -402,24 +393,27 @@ void main() {
                                 // Add toasts with different categories
                                 Toast(
                                   category: ToastCategory.general,
-                                  builder: (toast) => ElevatedButton(
-                                    onPressed: () => toast.hide(context),
-                                    child: const Text('General Toast'),
-                                  ),
+                                  builder:
+                                      (toast) => ElevatedButton(
+                                        onPressed: () => toast.hide(context),
+                                        child: const Text('General Toast'),
+                                      ),
                                 ).show(context);
                                 Toast(
                                   category: ToastCategory.error,
-                                  builder: (toast) => ElevatedButton(
-                                    onPressed: () => toast.hide(context),
-                                    child: const Text('Error Toast'),
-                                  ),
+                                  builder:
+                                      (toast) => ElevatedButton(
+                                        onPressed: () => toast.hide(context),
+                                        child: const Text('Error Toast'),
+                                      ),
                                 ).show(context);
                                 Toast(
                                   category: ToastCategory.warning,
-                                  builder: (toast) => ElevatedButton(
-                                    onPressed: () => toast.hide(context),
-                                    child: const Text('Warning Toast'),
-                                  ),
+                                  builder:
+                                      (toast) => ElevatedButton(
+                                        onPressed: () => toast.hide(context),
+                                        child: const Text('Warning Toast'),
+                                      ),
                                 ).show(context);
                               },
                               child: const Text('Show Toasts'),
@@ -462,8 +456,9 @@ void main() {
       expect(find.text('Warning Toast'), findsOneWidget);
     });
 
-    testWidgets('should auto-delete only visible category toasts',
-        (tester) async {
+    testWidgets('should auto-delete only visible category toasts', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: ToastProvider.create(
@@ -526,7 +521,7 @@ void main() {
 
       // Error should be auto-deleted
       expect(find.text('Error 1'), findsNothing);
-      
+
       // General toasts should still exist in provider but not visible in this viewer
       // We can't easily verify they still exist without another viewer, but the test
       // confirms the error toast was auto-deleted correctly

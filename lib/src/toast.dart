@@ -153,7 +153,10 @@ class ToastTheme extends ThemeExtension<ToastTheme> {
   ///
   /// [viewerPadding] is the padding around the entire toast stack.
   /// [gap] is the spacing between individual toasts in the stack.
-  ToastTheme({required this.viewerPadding, required this.gap});
+  const ToastTheme({required this.viewerPadding, required this.gap});
+
+  /// efault toast theme.
+  static const kDefault = ToastTheme(viewerPadding: EdgeInsets.all(12), gap: 8);
 
   /// Padding around the toast viewer container.
   ///
@@ -476,25 +479,21 @@ class _ToastViewerState extends State<ToastViewer> {
 
   /// Helper method to filter toasts by category and create index mapping
   /// Returns a record with (filteredToasts, filteredToMasterIndexMap)
-  ({
-    List<Toast> toasts,
-    Map<int, int> filteredToMasterIndex,
-  }) _filterToastsByCategory(List<Toast> allToasts) {
+  ({List<Toast> toasts, Map<int, int> filteredToMasterIndex})
+  _filterToastsByCategory(List<Toast> allToasts) {
     if (widget.categories == null || widget.categories!.isEmpty) {
       // No filtering - return all toasts with identity mapping
       return (
         toasts: allToasts,
-        filteredToMasterIndex: Map.fromIterable(
-          List.generate(allToasts.length, (i) => i),
-          key: (i) => i,
-          value: (i) => i,
-        ),
+        filteredToMasterIndex: {
+          for (var i in List.generate(allToasts.length, (i) => i)) i: i,
+        },
       );
     } else {
       // Filter toasts by category
       final filteredToasts = <Toast>[];
       final indexMap = <int, int>{};
-      
+
       for (var masterIndex = 0; masterIndex < allToasts.length; masterIndex++) {
         final toast = allToasts[masterIndex];
         if (widget.categories!.contains(toast.category)) {
@@ -502,11 +501,8 @@ class _ToastViewerState extends State<ToastViewer> {
           filteredToasts.add(toast);
         }
       }
-      
-      return (
-        toasts: filteredToasts,
-        filteredToMasterIndex: indexMap,
-      );
+
+      return (toasts: filteredToasts, filteredToMasterIndex: indexMap);
     }
   }
 
@@ -524,7 +520,8 @@ class _ToastViewerState extends State<ToastViewer> {
     int index,
     double width,
   ) {
-    final toastTheme = Theme.of(context).extension<ToastTheme>()!;
+    final toastTheme =
+        Theme.of(context).extension<ToastTheme>() ?? ToastTheme.kDefault;
 
     return (Offset transform, double scale, double opacity) => Positioned(
       bottom: switch (widget.alignment) {
@@ -714,18 +711,18 @@ class _ToastViewerState extends State<ToastViewer> {
     });
 
     final theme = Theme.of(context);
-    final toastTheme = theme.extension<ToastTheme>()!;
+    final toastTheme = theme.extension<ToastTheme>() ?? ToastTheme.kDefault;
 
     final allToasts = watch(context, toastProvider.data.call);
-    
+
     // Use helper to filter toasts by category
     final filtered = _filterToastsByCategory(allToasts);
     final toasts = filtered.toasts;
     final filteredToMasterIndex = filtered.filteredToMasterIndex;
-    
+
     int calculatePositionedIndex(int filteredIndex) {
       final deletedIndexes = toastProvider.willDeleteToastIndex();
-      
+
       // Count how many filtered toasts after this one are marked for deletion
       int deletedAfter = 0;
       for (var i = filteredIndex + 1; i < toasts.length; i++) {
@@ -734,7 +731,7 @@ class _ToastViewerState extends State<ToastViewer> {
           deletedAfter++;
         }
       }
-      
+
       return toasts.length - filteredIndex - deletedAfter - 1;
     }
 
@@ -755,7 +752,9 @@ class _ToastViewerState extends State<ToastViewer> {
                   SignalBuilder(
                     builder: (context) {
                       final masterIndex = filteredToMasterIndex[filteredIndex]!;
-                      final positionedIndex = calculatePositionedIndex(filteredIndex);
+                      final positionedIndex = calculatePositionedIndex(
+                        filteredIndex,
+                      );
                       final indexToast = writableComputed<int>(
                         context,
                         get:
@@ -769,13 +768,8 @@ class _ToastViewerState extends State<ToastViewer> {
                       );
                       effect(context, () async {
                         if (indexToast() == -1) {
-                          await Future.delayed(
-                            const Duration(milliseconds: 300),
-                          );
-                          toastProvider.indexToastMap({
-                            ...toastProvider.indexToastMap(),
-                            toast.id: masterIndex,
-                          });
+                          await Future.delayed(Durations.medium2);
+                          indexToast(masterIndex);
                         }
                       });
 
