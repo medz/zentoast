@@ -582,16 +582,17 @@ class ToastViewer extends StatelessWidget {
             final hovered = isHovered() || paused();
             final gap = toastTheme.gap;
 
-            final visualIndexes = List<int>.filled(masterIndexes.length, 0);
-            final expandedOffsets = <double>[0];
+            final positions = List<(int, double)>.filled(masterIndexes.length, (
+              0,
+              0.0,
+            ));
             var visualIndex = 0;
+            var expandedOffset = 0.0;
             for (var i = masterIndexes.length - 1; i >= 0; i--) {
               final masterIndex = masterIndexes[i];
-              visualIndexes[i] = visualIndex;
+              positions[i] = (visualIndex, expandedOffset);
               if (!willDeleteToastIndex.contains(masterIndex)) {
-                expandedOffsets.add(
-                  expandedOffsets.last + allToasts[masterIndex].height + gap,
-                );
+                expandedOffset += allToasts[masterIndex].height + gap;
                 visualIndex++;
               }
             }
@@ -609,11 +610,10 @@ class ToastViewer extends StatelessWidget {
                         key: ValueKey(allToasts[masterIndex].id),
                         builder: (context) {
                           final toast = allToasts[masterIndex];
-                          final positionedIndex = visualIndexes[filteredIndex];
+                          final (positionedIndex, expandedHeight) =
+                              positions[filteredIndex];
                           final baseHeight =
-                              hovered
-                                  ? expandedOffsets[positionedIndex]
-                                  : gap * positionedIndex;
+                              hovered ? expandedHeight : gap * positionedIndex;
                           final baseScale =
                               hovered ? 1.0 : 1.0 - 0.03 * positionedIndex;
                           final baseOpacity =
