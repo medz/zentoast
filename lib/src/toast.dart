@@ -235,8 +235,7 @@ class ToastThemeProvider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final data =
-        this.data ?? ToastTheme(viewerPadding: EdgeInsets.all(12), gap: 8);
+    final data = this.data ?? ToastTheme.kDefault;
     return Theme(
       data: theme.copyWith(
         extensions: {
@@ -301,20 +300,11 @@ class ToastProvider extends InheritedWidget {
   static Widget create({required Widget child}) {
     return Builder(
       builder: (context) {
-        final data = ReactiveList<Toast>.scoped(context, const []);
-        final willDeleteToastIndex = ReactiveSet<int>.scoped(
-          context,
-          const <int>{},
-        );
-        final onDragToastIndex = ReactiveSet<int>.scoped(
-          context,
-          const <int>{},
-        );
-
         return ToastProvider._(
-          data: data,
-          willDeleteToastIndex: willDeleteToastIndex,
-          onDragToastIndex: onDragToastIndex,
+          data: ReactiveList<Toast>.scoped(context, const []),
+          willDeleteToastIndex:
+              ReactiveSet<int>.scoped(context, const <int>{}),
+          onDragToastIndex: ReactiveSet<int>.scoped(context, const <int>{}),
           child: child,
         );
       },
@@ -363,10 +353,7 @@ class ToastProvider extends InheritedWidget {
   /// ```
   void hide(Toast toast) {
     final index = data.indexOf(toast);
-    if (index == -1) {
-      return;
-    }
-    willDeleteToastIndex.add(index);
+    if (index != -1) willDeleteToastIndex.add(index);
   }
 
   @override
@@ -485,12 +472,10 @@ class ToastViewer extends StatelessWidget {
         return List<int>.generate(allToasts.length, (i) => i);
       }
 
-      final masterIndexes = <int>[];
-      for (var i = 0; i < allToasts.length; i++) {
-        if (categories.contains(allToasts[i].category)) masterIndexes.add(i);
-      }
-
-      return masterIndexes;
+      return [
+        for (var i = 0; i < allToasts.length; i++)
+          if (categories.contains(allToasts[i].category)) i,
+      ];
     }
 
     void setHoverDebounced(bool value, {Duration? delay}) {
@@ -506,12 +491,10 @@ class ToastViewer extends StatelessWidget {
 
     void resetCleanUpDelete() {
       timers.cleanUpDelete?.cancel();
-      timers.cleanUpDelete = null;
     }
 
     void resetPeriodicDelete() {
       timers.periodicDelete?.cancel();
-      timers.periodicDelete = null;
     }
 
     effect(context, () {
@@ -521,7 +504,6 @@ class ToastViewer extends StatelessWidget {
 
       if (deletedIndexes.isNotEmpty &&
           deletedIndexes.length == toastProvider.data.length) {
-        resetCleanUpDelete();
         timers.cleanUpDelete = Timer(
           const Duration(milliseconds: 250),
           () => batch(() {
@@ -560,10 +542,12 @@ class ToastViewer extends StatelessWidget {
 
     final toastTheme =
         Theme.of(context).extension<ToastTheme>() ?? ToastTheme.kDefault;
-    final isTop = alignment.y < 0;
-    final isBottom = alignment.y > 0;
-    final isLeft = alignment.x < 0;
-    final isRight = alignment.x > 0;
+    final (isTop, isBottom, isLeft, isRight) = (
+      alignment.y < 0,
+      alignment.y > 0,
+      alignment.x < 0,
+      alignment.x > 0,
+    );
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -663,8 +647,6 @@ class ToastViewer extends StatelessWidget {
                                   : baseOpacity;
 
                           final dragPosition = manualDragPosition();
-                          final dragOpacity =
-                              dragPosition * alignment.y.sign > 20 ? 0.0 : 1.0;
 
                           final appearOffsetMotion =
                               isFirstAppear
@@ -734,14 +716,12 @@ class ToastViewer extends StatelessWidget {
                                                   toastProvider.onDragToastIndex
                                                       .add(masterIndex);
                                                 },
-                                                onVerticalDragUpdate: (
-                                                  details,
-                                                ) {
-                                                  manualDragPosition.set(
-                                                    manualDragPosition() +
-                                                        details.delta.dy,
-                                                  );
-                                                },
+                                                onVerticalDragUpdate:
+                                                    (details) =>
+                                                        manualDragPosition.set(
+                                                          manualDragPosition() +
+                                                              details.delta.dy,
+                                                        ),
                                                 onVerticalDragCancel:
                                                     () => endDrag(reset: true),
                                                 onVerticalDragEnd:
@@ -772,7 +752,9 @@ class ToastViewer extends StatelessWidget {
                                                 : const Motion.snappySpring(),
                                           ),
                                           MotionArgument.single(
-                                            dragOpacity,
+                                            dragPosition * alignment.y.sign > 20
+                                                ? 0.0
+                                                : 1.0,
                                             const Motion.snappySpring(),
                                           ),
                                         ),
