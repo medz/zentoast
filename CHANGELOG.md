@@ -1,3 +1,6 @@
+## 0.2.1
+- Update `oref` to `^2.8.0` with correct and best practices of `oref`. Thanks @medz
+
 ## 0.2.0
 - Update `oref` to `^2.6.0`
 
