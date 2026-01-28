@@ -321,8 +321,6 @@ class ToastProvider extends InheritedWidget {
   @visibleForTesting
   final WritableSignal<List<Toast>> data;
 
-  /// Maps toast IDs to their indices in the stack.
-
   /// Set of toast indices that are marked for deletion.
   ///
   /// Used internally to track toasts that are animating out.
