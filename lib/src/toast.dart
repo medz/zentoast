@@ -636,6 +636,7 @@ class ToastViewer extends StatelessWidget {
                   children: [
                     for (final (filteredIndex, toast) in toasts.indexed)
                       SignalBuilder(
+                        key: ValueKey(toast.id),
                         builder: (context) {
                           final masterIndex = masterIndexes[filteredIndex];
                           final positionedIndex = visualIndexes[filteredIndex];
@@ -651,23 +652,15 @@ class ToastViewer extends StatelessWidget {
                             masterIndex,
                           );
 
-                          final indexToast = writableComputed<int>(
-                            context,
-                            get:
-                                (old) =>
-                                    toastProvider.indexToastMap()[toast.id] ??
-                                    -1,
-                            set:
-                                (value) => toastProvider.indexToastMap.set({
-                                  ...toastProvider.indexToastMap(),
-                                  toast.id: value,
-                                }),
-                          );
-                          effect(context, () async {
-                            if (indexToast() == -1) {
-                              await Future.delayed(Durations.medium2);
-                              indexToast.set(masterIndex);
-                            }
+                          final firstAppear = signal(context, true);
+                          effect(context, () {
+                            if (!firstAppear()) return;
+                            final timer = Timer(
+                              Durations.medium2,
+                              () => firstAppear.set(false),
+                            );
+                            onEffectCleanup(timer.cancel);
+                            onEffectDispose(timer.cancel);
                           });
 
                           final manualDragPosition = signal(context, 0.0);
@@ -713,7 +706,7 @@ class ToastViewer extends StatelessWidget {
                             );
                           }
 
-                          final isFirstAppear = indexToast() == -1;
+                          final isFirstAppear = firstAppear();
                           final transformY =
                               isFirstAppear
                                   ? -34.0
