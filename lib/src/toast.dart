@@ -302,8 +302,7 @@ class ToastProvider extends InheritedWidget {
       builder: (context) {
         return ToastProvider._(
           data: ReactiveList<Toast>.scoped(context, const []),
-          willDeleteToastIndex:
-              ReactiveSet<int>.scoped(context, const <int>{}),
+          willDeleteToastIndex: ReactiveSet<int>.scoped(context, const <int>{}),
           onDragToastIndex: ReactiveSet<int>.scoped(context, const <int>{}),
           child: child,
         );
