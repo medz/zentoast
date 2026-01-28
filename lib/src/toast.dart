@@ -482,15 +482,6 @@ class ToastViewer extends StatefulWidget {
 class _ToastViewerState extends State<ToastViewer> {
   final isHovered = signal(null, false);
   final paused = signal(null, false);
-  late final filteredWillDeleteToastIndex = computed<Set<int>>(context, (_) {
-    final toastProvider = ToastProvider.of(context);
-    final allToasts = toastProvider.data();
-    final willDeleteToastIndex = toastProvider.willDeleteToastIndex();
-    return {
-      for (final index in willDeleteToastIndex)
-        if (isBelongToCategories(allToasts[index])) index,
-    };
-  });
 
   Effect? _wipeToastEffect;
   Effect? _periodicDeleteToastEffect;
@@ -685,6 +676,14 @@ class _ToastViewerState extends State<ToastViewer> {
   @override
   Widget build(BuildContext context) {
     final toastProvider = ToastProvider.of(context);
+    final filteredWillDeleteToastIndex = computed<Set<int>>(context, (_) {
+      final allToasts = toastProvider.data();
+      final willDeleteToastIndex = toastProvider.willDeleteToastIndex();
+      return {
+        for (final index in willDeleteToastIndex)
+          if (isBelongToCategories(allToasts[index])) index,
+      };
+    });
 
     _wipeToastEffect ??= effect(context, () {
       onEffectCleanup(() => _cleanUpDeleteTimer?.cancel());
