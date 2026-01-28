@@ -666,6 +666,28 @@ class ToastViewer extends StatelessWidget {
                           final dragOpacity =
                               dragPosition * alignment.y.sign > 20 ? 0.0 : 1.0;
 
+                          final appearOffsetMotion =
+                              isFirstAppear
+                                  ? const CurvedMotion(
+                                    Durations.medium1,
+                                    Curves.easeOutExpo,
+                                  )
+                                  : const Motion.snappySpring(
+                                    duration: Duration(milliseconds: 500),
+                                  );
+                          final appearScaleMotion =
+                              isFirstAppear
+                                  ? (const Motion.snappySpring()).segment(
+                                    length: 0.1,
+                                  )
+                                  : const Motion.snappySpring(
+                                    duration: Duration(milliseconds: 500),
+                                  );
+                          final appearOpacityMotion =
+                              isFirstAppear
+                                  ? const Motion.linear(Durations.medium1)
+                                  : const Motion.snappySpring();
+
                           return ((
                             Offset transform,
                             double scale,
@@ -763,31 +785,10 @@ class ToastViewer extends StatelessWidget {
                           }).motion(
                             MotionArgument.offset(
                               Offset(0.0, transformY),
-                              isFirstAppear
-                                  ? const CurvedMotion(
-                                    Durations.medium1,
-                                    Curves.easeOutExpo,
-                                  )
-                                  : const Motion.snappySpring(
-                                    duration: Duration(milliseconds: 500),
-                                  ),
+                              appearOffsetMotion,
                             ),
-                            MotionArgument.single(
-                              scale,
-                              isFirstAppear
-                                  ? (const Motion.snappySpring()).segment(
-                                    length: 0.1,
-                                  )
-                                  : const Motion.snappySpring(
-                                    duration: Duration(milliseconds: 500),
-                                  ),
-                            ),
-                            MotionArgument.single(
-                              opacity,
-                              isFirstAppear
-                                  ? const Motion.linear(Durations.medium1)
-                                  : const Motion.snappySpring(),
-                            ),
+                            MotionArgument.single(scale, appearScaleMotion),
+                            MotionArgument.single(opacity, appearOpacityMotion),
                           );
                         },
                       ),
