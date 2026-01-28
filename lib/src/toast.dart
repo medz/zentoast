@@ -475,28 +475,18 @@ class ToastViewer extends StatelessWidget {
     final timers = useMemoized(context, _ToastViewerTimers.new);
     onUnmounted(context, timers.dispose);
 
-    ({List<Toast> toasts, List<int> masterIndexes}) filterToasts(
-      List<Toast> allToasts,
-    ) {
+    List<int> filterToastIndexes(List<Toast> allToasts) {
       final categories = this.categories;
       if (categories == null || categories.isEmpty) {
-        return (
-          toasts: allToasts,
-          masterIndexes: List<int>.generate(allToasts.length, (i) => i),
-        );
+        return List<int>.generate(allToasts.length, (i) => i);
       }
 
-      final filteredToasts = <Toast>[];
       final masterIndexes = <int>[];
       for (var i = 0; i < allToasts.length; i++) {
-        final toast = allToasts[i];
-        if (categories.contains(toast.category)) {
-          masterIndexes.add(i);
-          filteredToasts.add(toast);
-        }
+        if (categories.contains(allToasts[i].category)) masterIndexes.add(i);
       }
 
-      return (toasts: filteredToasts, masterIndexes: masterIndexes);
+      return masterIndexes;
     }
 
     void setHoverDebounced(bool value, {Duration? delay}) {
@@ -549,13 +539,13 @@ class ToastViewer extends StatelessWidget {
         final allToasts = untrack(() => toastProvider.data);
         if (allToasts.isEmpty) return;
 
-        final filtered = filterToasts(allToasts);
-        if (filtered.toasts.isEmpty) return;
+        final masterIndexes = filterToastIndexes(allToasts);
+        if (masterIndexes.isEmpty) return;
 
         final willDeleteToastIndex = untrack(
           () => toastProvider.willDeleteToastIndex,
         );
-        for (final masterIndex in filtered.masterIndexes) {
+        for (final masterIndex in masterIndexes) {
           if (!willDeleteToastIndex.contains(masterIndex)) {
             toastProvider.hide(allToasts[masterIndex]);
             break;
@@ -583,21 +573,20 @@ class ToastViewer extends StatelessWidget {
         return SignalBuilder(
           builder: (context) {
             final allToasts = toastProvider.data;
-            final filtered = filterToasts(allToasts);
-            final toasts = filtered.toasts;
-            final masterIndexes = filtered.masterIndexes;
+            final masterIndexes = filterToastIndexes(allToasts);
             final willDeleteToastIndex = toastProvider.willDeleteToastIndex;
             final hovered = isHovered() || paused();
             final gap = toastTheme.gap;
 
-            final visualIndexes = List<int>.filled(toasts.length, 0);
+            final visualIndexes = List<int>.filled(masterIndexes.length, 0);
             final expandedOffsets = <double>[0];
             var visualIndex = 0;
-            for (var i = toasts.length - 1; i >= 0; i--) {
+            for (var i = masterIndexes.length - 1; i >= 0; i--) {
+              final masterIndex = masterIndexes[i];
               visualIndexes[i] = visualIndex;
-              if (!willDeleteToastIndex.contains(masterIndexes[i])) {
+              if (!willDeleteToastIndex.contains(masterIndex)) {
                 expandedOffsets.add(
-                  expandedOffsets.last + toasts[i].height + gap,
+                  expandedOffsets.last + allToasts[masterIndex].height + gap,
                 );
                 visualIndex++;
               }
@@ -610,11 +599,12 @@ class ToastViewer extends StatelessWidget {
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    for (final (filteredIndex, toast) in toasts.indexed)
+                    for (final (filteredIndex, masterIndex)
+                        in masterIndexes.indexed)
                       SignalBuilder(
-                        key: ValueKey(toast.id),
+                        key: ValueKey(allToasts[masterIndex].id),
                         builder: (context) {
-                          final masterIndex = masterIndexes[filteredIndex];
+                          final toast = allToasts[masterIndex];
                           final positionedIndex = visualIndexes[filteredIndex];
                           final baseHeight =
                               hovered
