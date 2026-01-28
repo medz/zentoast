@@ -625,42 +625,27 @@ class ToastViewer extends StatelessWidget {
                               Durations.medium2,
                               () => firstAppear.set(false),
                             );
-                            onEffectCleanup(timer.cancel);
                             onEffectDispose(timer.cancel);
                           });
 
                           final manualDragPosition = signal(context, 0.0);
 
-                          void endDrag() {
+                          void endDrag({
+                            DragEndDetails? details,
+                            bool reset = false,
+                          }) {
                             toastProvider.onDragToastIndex.remove(masterIndex);
-                          }
-
-                          void onDragStart(DragStartDetails details) {
-                            manualDragPosition.set(0.0);
-                            toastProvider.onDragToastIndex.add(masterIndex);
-                          }
-
-                          void onDragCancel() {
-                            manualDragPosition.set(0.0);
-                            endDrag();
-                          }
-
-                          void onDragEnd(DragEndDetails details) {
-                            endDrag();
-                            if (details.primaryVelocity case final v?) {
-                              if ((alignment.y > 0 && v > 50) ||
-                                  (alignment.y < 0 && v < 50)) {
-                                toastProvider.hide(toast);
-                              } else {
-                                manualDragPosition.set(0.0);
-                              }
+                            final v = details?.primaryVelocity;
+                            if (v == null) {
+                              if (reset) manualDragPosition.set(0.0);
+                              return;
                             }
-                          }
-
-                          void onDragUpdate(DragUpdateDetails details) {
-                            manualDragPosition.set(
-                              manualDragPosition() + details.delta.dy,
-                            );
+                            if ((alignment.y > 0 && v > 50) ||
+                                (alignment.y < 0 && v < 50)) {
+                              toastProvider.hide(toast);
+                            } else {
+                              manualDragPosition.set(0.0);
+                            }
                           }
 
                           final isFirstAppear = firstAppear();
@@ -678,17 +663,7 @@ class ToastViewer extends StatelessWidget {
 
                           final dragPosition = manualDragPosition();
                           final dragOpacity =
-                              (dragPosition > 20 && alignment.y > 0) ||
-                                      (dragPosition < -20 && alignment.y < 0)
-                                  ? 0.0
-                                  : 1.0;
-                          final isDragging = toastProvider
-                              .onDragToastIndex
-                              .contains(masterIndex);
-                          final dragMotion =
-                              isDragging
-                                  ? MotionPresets.instant
-                                  : const Motion.snappySpring();
+                              dragPosition * alignment.y.sign > 20 ? 0.0 : 1.0;
 
                           Widget dragLayer(
                             double userDragPosition,
@@ -704,10 +679,21 @@ class ToastViewer extends StatelessWidget {
                                       paused.set(!paused());
                                     }
                                   },
-                                  onVerticalDragStart: onDragStart,
-                                  onVerticalDragUpdate: onDragUpdate,
-                                  onVerticalDragCancel: onDragCancel,
-                                  onVerticalDragEnd: onDragEnd,
+                                  onVerticalDragStart: (_) {
+                                    manualDragPosition.set(0.0);
+                                    toastProvider.onDragToastIndex.add(
+                                      masterIndex,
+                                    );
+                                  },
+                                  onVerticalDragUpdate: (details) {
+                                    manualDragPosition.set(
+                                      manualDragPosition() + details.delta.dy,
+                                    );
+                                  },
+                                  onVerticalDragCancel:
+                                      () => endDrag(reset: true),
+                                  onVerticalDragEnd:
+                                      (details) => endDrag(details: details),
                                   child: SizedBox(
                                     height: toast.height + gap,
                                     child: ColoredBox(
@@ -748,7 +734,10 @@ class ToastViewer extends StatelessWidget {
                                         child: dragLayer.motion(
                                           MotionArgument.single(
                                             dragPosition,
-                                            dragMotion,
+                                            toastProvider.onDragToastIndex
+                                                    .contains(masterIndex)
+                                                ? MotionPresets.instant
+                                                : const Motion.snappySpring(),
                                           ),
                                           MotionArgument.single(
                                             dragOpacity,
